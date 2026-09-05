@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information created on sign-in",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address",
+          "maxLength": 150
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar URL",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["userId", "createdAt"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A private user journal entry with reflections and metadata",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document identifier",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID matching request.auth.uid",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the journal entry",
+          "maxLength": 200
+        },
+        "content": {
+          "type": "string",
+          "description": "The main reflection or journal body written by user",
+          "maxLength": 20000
+        },
+        "mood": {
+          "type": "string",
+          "description": "Selected mood or emotional tone",
+          "maxLength": 50
+        },
+        "summary": {
+          "type": "string",
+          "description": "AI-generated summary and key takeaways",
+          "maxLength": 10000
+        },
+        "reflection": {
+          "type": "string",
+          "description": "Initial AI reflection and insights",
+          "maxLength": 15000
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags or categorization keywords"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation ISO date string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update ISO date string"
+        }
+      },
+      "required": ["id", "userId", "title", "content", "createdAt"]
+    },
+    "JournalMessage": {
+      "title": "JournalMessage",
+      "description": "Multi-turn conversation message regarding a journal entry",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document identifier",
+          "maxLength": 64
+        },
+        "entryId": {
+          "type": "string",
+          "description": "Parent journal entry ID",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "User ID matching auth UID",
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "description": "Sender role",
+          "enum": ["user", "model"]
+        },
+        "content": {
+          "type": "string",
+          "description": "Message text",
+          "maxLength": 20000
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Message timestamp"
+        }
+      },
+      "required": ["id", "entryId", "userId", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile document isolated per user"
+    },
+    "/users/{userId}/entries/{entryId}": {
+      "schema": { "$ref": "#/entities/JournalEntry" },
+      "description": "Private journal entries isolated to the authenticated user"
+    },
+    "/users/{userId}/entries/{entryId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/JournalMessage" },
+      "description": "Multi-turn conversation messages attached to a specific entry"
+    }
+  }
+}

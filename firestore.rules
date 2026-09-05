@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId == userId
+        && data.userId == request.auth.uid
+        && (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100))
+        && (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 150))
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 500))
+        && data.createdAt is string
+        && data.createdAt.size() <= 40;
+    }
+
+    function isValidEntry(data, userId) {
+      return data.id is string && data.id.size() <= 64
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.content is string && data.content.size() <= 30000
+        && (!('mood' in data) || data.mood == null || (data.mood is string && data.mood.size() <= 50))
+        && (!('summary' in data) || data.summary == null || (data.summary is string && data.summary.size() <= 15000))
+        && (!('reflection' in data) || data.reflection == null || (data.reflection is string && data.reflection.size() <= 20000))
+        && (!('tags' in data) || data.tags == null || (data.tags is list && data.tags.size() <= 20))
+        && data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    function isValidMessage(data, userId, entryId) {
+      return data.id is string && data.id.size() <= 64
+        && data.entryId == entryId
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && (data.role == 'user' || data.role == 'model')
+        && data.content is string && data.content.size() <= 30000
+        && data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(request.resource.data, userId);
+      allow delete: if isOwner(userId);
+
+      match /entries/{entryId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(entryId)
+          && isValidEntry(request.resource.data, userId);
+        allow update: if isOwner(userId)
+          && isValidId(entryId)
+          && isValidEntry(request.resource.data, userId)
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+
+        match /messages/{messageId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId)
+            && isValidId(messageId)
+            && isValidMessage(request.resource.data, userId, entryId);
+          allow update: if isOwner(userId)
+            && isValidId(messageId)
+            && isValidMessage(request.resource.data, userId, entryId)
+            && request.resource.data.userId == resource.data.userId
+            && request.resource.data.entryId == resource.data.entryId;
+          allow delete: if isOwner(userId);
+        }
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
